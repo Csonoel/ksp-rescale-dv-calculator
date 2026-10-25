@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KSP Rescale ΔV Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070b14;--panel:#0e1524;--panel2:#131c30;--line:#22304d;
+  --text:#e6ecf7;--muted:#8796b3;--accent:#ffb547;--accent2:#5ad1ff;--good:#6ee7a8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 20% -10%,#1b2a4a 0%,transparent 55%),radial-gradient(ellipse at 110% 20%,#2a1a3a 0%,transparent 45%),var(--bg);
+  color:var(--text);font-family:'Space Grotesk',system-ui,sans-serif;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;
+  background-image:radial-gradient(1px 1px at 10% 20%,#fff,transparent),radial-gradient(1px 1px at 70% 40%,#fff,transparent),
+  radial-gradient(1px 1px at 40% 80%,#cde,transparent),radial-gradient(1px 1px at 85% 75%,#fff,transparent),
+  radial-gradient(1px 1px at 25% 60%,#bcd,transparent),radial-gradient(1px 1px at 60% 10%,#fff,transparent),
+  radial-gradient(1px 1px at 92% 12%,#fff,transparent),radial-gradient(1px 1px at 5% 92%,#fff,transparent)}
+.wrap{max-width:1000px;margin:0 auto;padding:32px 16px 60px;position:relative}
+h1{font-size:clamp(26px,5vw,40px);margin:0 0 4px;letter-spacing:-.02em}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:0 0 28px}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:18px}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:10px}
+.grid{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.scaleRow{display:flex;align-items:center;gap:14px}
+input[type=range]{flex:1;accent-color:var(--accent);height:6px}
+.num{background:#0a1020;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;
+  font-family:'JetBrains Mono',monospace;font-size:18px;width:110px}
+.num:focus{outline:2px solid var(--accent);border-color:transparent}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{background:#0a1020;border:1px solid var(--line);color:var(--muted);padding:6px 12px;border-radius:999px;cursor:pointer;font:inherit;font-size:13px}
+.chip:hover{color:var(--text);border-color:var(--accent2)}
+.chip.on{background:var(--accent);color:#1a1205;border-color:var(--accent);font-weight:700}
+.opts{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;align-items:center}
+.opts label{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:14px}
+.opts .num{width:80px;font-size:15px;padding:7px 10px}
+.hero{display:flex;flex-direction:column;justify-content:center;text-align:center;
+  background:radial-gradient(circle at 50% 120%,rgba(255,181,71,.18),transparent 60%),linear-gradient(180deg,var(--panel2),var(--panel))}
+.big{font-family:'JetBrains Mono',monospace;font-size:clamp(40px,8vw,58px);font-weight:600;color:var(--accent);line-height:1}
+.big small{font-size:.4em;color:var(--muted)}
+.heroNote{color:var(--muted);font-size:14px;margin-top:10px}
+.ratio{margin-top:12px;font-family:'JetBrains Mono',monospace;color:var(--accent2);font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.1em;padding:8px 6px;border-bottom:1px solid var(--line)}
+td{padding:9px 6px;border-bottom:1px solid rgba(34,48,77,.5)}
+td.n,th.n{text-align:right;font-family:'JetBrains Mono',monospace}
+td.s{color:var(--accent)}
+tr.group td{color:var(--accent2);font-size:12px;text-transform:uppercase;letter-spacing:.12em;padding-top:16px;border:none}
+tr:not(.group):hover td{background:rgba(90,209,255,.04)}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;cursor:pointer}
+.total{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px;margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
+.total .v{font-family:'JetBrains Mono',monospace;font-size:28px;color:var(--good)}
+.custom{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.custom .out{font-family:'JetBrains Mono',monospace;font-size:22px;color:var(--accent)}
+.tablewrap{overflow-x:auto}
+.foot{color:var(--muted);font-size:13px;line-height:1.6}
+.btn{background:transparent;border:1px solid var(--line);color:var(--muted);padding:6px 12px;border-radius:8px;cursor:pointer;font:inherit;font-size:13px}
+.btn:hover{color:var(--text);border-color:var(--accent2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Rescale <span>ΔV</span> Calculator</h1>
+  <p class="sub">Estimate delta-v for any Kerbol system rescale, from stock values.</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="label">Rescale multiplier</div>
+      <div class="scaleRow">
+        <input type="range" id="slider" min="1" max="10.6" step="0.1" value="2.5">
+        <input type="number" class="num" id="scale" min="0.1" max="20" step="0.1" value="2.5">
+      </div>
+      <div class="presets" id="presets"></div>
+      <div class="opts">
+        <label>Safety margin <input type="number" class="num" id="margin" value="10" min="0" max="100"> %</label>
+      </div>
+    </div>
+    <div class="card hero">
+      <div class="label">Kerbin surface → low orbit</div>
+      <div class="big" id="orbit">—</div>
+      <div class="heroNote" id="orbitMargin"></div>
+      <div class="ratio" id="ratio"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="label" style="margin:0">Mission planner — tick the legs you'll fly</div>
+      <button class="btn" id="clear">Clear all</button>
+    </div>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th></th><th>Leg</th><th class="n">Stock</th><th class="n">Scaled</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    </div>
+    <div class="total">
+      <div><div class="label" style="margin:0">Mission total (with margin)</div><div style="color:var(--muted);font-size:13px" id="rawTotal"></div></div>
+      <div class="v" id="total">0 m/s</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label">Convert any stock value</div>
+    <div class="custom">
+      <input type="number" class="num" id="customIn" value="1000" step="10"> <span style="color:var(--muted)">m/s stock, vacuum →</span>
+      <span class="out" id="customOut">—</span>
+    </div>
+  </div>
+
+  <div class="card foot">
+    <div class="label">How it works</div>
+    Rescale mods keep surface gravity the same and multiply radius (and usually orbit sizes) by the multiplier <b>s</b>.
+    Orbital speeds scale with √(g·R), so vacuum maneuvers scale by <b>√s</b>.
+    Ascent from Kerbin is modeled as <b>2300·√s</b> (orbital speed) + <b>1100·s<sup>0.25</sup></b> (gravity &amp; drag losses), which gives ~3,400 m/s at 1× and ~9,200 m/s at 10× (close to RSS).
+    Stock values come from the community ΔV map. Atmospheric landings assume aerobraking/parachutes. Real numbers depend on your TWR, ascent profile, and mod config — treat these as planning estimates.
+  </div>
+</div>
+
+<script>
+const legs = [
+  {g:"Kerbin"},
+  {id:"asc", n:"Surface → Low Kerbin Orbit", v:3400, ascent:true, on:true},
+  {id:"geo", n:"LKO → Keostationary orbit", v:1115},
+  {id:"ret", n:"Deorbit / return to Kerbin (aerobrake)", v:100},
+  {g:"Mun"},
+  {id:"mt", n:"LKO → Mun transfer", v:860},
+  {id:"mc", n:"Mun capture (low orbit)", v:310},
+  {id:"ml", n:"Mun landing", v:580},
+  {id:"ma", n:"Mun ascent to orbit", v:580},
+  {id:"mr", n:"Mun orbit → Kerbin return", v:310},
+  {g:"Minmus"},
+  {id:"nt", n:"LKO → Minmus transfer", v:930},
+  {id:"nc", n:"Minmus capture (low orbit)", v:160},
+  {id:"nl", n:"Minmus landing", v:180},
+  {id:"na", n:"Minmus ascent to orbit", v:180},
+  {id:"nr", n:"Minmus orbit → Kerbin return", v:160},
+  {g:"Interplanetary (from LKO)"},
+  {id:"dt", n:"Duna transfer", v:1060},
+  {id:"dc", n:"Duna capture (low orbit)", v:360},
+  {id:"dl", n:"Duna landing (chutes + powered)", v:300},
+  {id:"da", n:"Duna ascent to orbit", v:1450},
+  {id:"et", n:"Eve transfer", v:1030},
+  {id:"ec", n:"Eve capture (low orbit)", v:1330},
+  {id:"jt", n:"Jool transfer", v:1990},
+  {id:"jc", n:"Jool capture (low orbit)", v:2810},
+  {id:"mot", n:"Moho transfer", v:2520},
+  {id:"moc", n:"Moho capture (low orbit)", v:2410},
+];
+const presets=[[1,"Stock"],[2.5,"2.5×"],[2.7,"JNSQ 2.7×"],[3.2,"3.2×"],[6.4,"6.4×"],[10.625,"RSS 10.6×"]];
+const $=id=>document.getElementById(id);
+const fmt=v=>Math.round(v).toLocaleString("en-US")+" m/s";
+
+const ascent=s=>2300*Math.sqrt(s)+1100*Math.pow(s,0.25);
+const scaled=(l,s)=>l.ascent?ascent(s):l.v*Math.sqrt(s);
+
+// build rows
+const tbody=$("rows");
+legs.forEach(l=>{
+  const tr=document.createElement("tr");
+  if(l.g){tr.className="group";tr.innerHTML=`<td colspan="4">${l.g}</td>`;}
+  else{
+    tr.innerHTML=`<td><input type="checkbox" id="c_${l.id}" ${l.on?"checked":""}></td>
+      <td><label for="c_${l.id}" style="cursor:pointer">${l.n}</label></td>
+      <td class="n">${fmt(l.v)}</td><td class="n s" id="s_${l.id}"></td>`;
+  }
+  tbody.appendChild(tr);
+});
+tbody.addEventListener("change",update);
+
+// presets
+const pWrap=$("presets");
+presets.forEach(([v,t])=>{
+  const b=document.createElement("button");b.className="chip";b.textContent=t;b.dataset.v=v;
+  b.onclick=()=>{setScale(v)};pWrap.appendChild(b);
+});
+
+function setScale(v){$("scale").value=v;$("slider").value=Math.min(v,10.6);update();}
+$("slider").oninput=e=>{$("scale").value=e.target.value;update();};
+$("scale").oninput=e=>{const v=parseFloat(e.target.value);if(v>0)$("slider").value=Math.min(v,10.6);update();};
+["margin","customIn"].forEach(id=>$(id).oninput=update);
+$("clear").onclick=()=>{legs.forEach(l=>{if(!l.g)$("c_"+l.id).checked=false});update();};
+
+function update(){
+  const s=parseFloat($("scale").value)||1;
+  const m=1+(parseFloat($("margin").value)||0)/100;
+  const o=ascent(s);
+  $("orbit").innerHTML=Math.round(o).toLocaleString("en-US")+"<small> m/s</small>";
+  $("orbitMargin").textContent=`With margin: ${fmt(o*m)}`;
+  $("ratio").textContent=`Vacuum ΔV ×${Math.sqrt(s).toFixed(3)}  ·  Ascent ×${(o/ascent(1)).toFixed(3)}`;
+  let tot=0;
+  legs.forEach(l=>{if(l.g)return;const v=scaled(l,s);$("s_"+l.id).textContent=fmt(v);if($("c_"+l.id).checked)tot+=v;});
+  $("total").textContent=fmt(tot*m);
+  $("rawTotal").textContent=`Without margin: ${fmt(tot)}`;
+  $("customOut").textContent=fmt((parseFloat($("customIn").value)||0)*Math.sqrt(s));
+  document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",Math.abs(c.dataset.v-s)<0.001));
+}
+update();
+</script>
+</body>
+</html>
